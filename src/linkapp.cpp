@@ -377,7 +377,12 @@ void LinkApp::launch(const string &selectedFile, const string &selectedDir) {
 			gmenu2x->writeConfigOpen2x();
 #endif
 		if (selectedFile == "") gmenu2x->writeTmp();
-
+		if (gmenu2x->confInt["saveAutoStart"]) {
+			gmenu2x->confInt["lastCPU"] = clock();
+			gmenu2x->confStr["lastCommand"] = command.c_str();
+			gmenu2x->confStr["lastDirectory"] = wd.c_str();
+			gmenu2x->writeConfig();
+		}
 		gmenu2x->quit();
 		if (clock() != gmenu2x->confInt["cpuMenu"]) {
       gmenu2x->setCPU(clock());

@@ -514,17 +514,23 @@ void GMenu2X::quit() {
 	hwDeinit();
 }
 
-int main(int /*argc*/, char * /*argv*/[]) {
+int main(int argc, char * argv[]) {
 	INFO("GMenu2X starting: If you read this message in the logs, check http://mtorromeo.github.com/gmenu2x/troubleshooting.html for a solution");
 
 	signal(SIGINT, &quit_all);
 	signal(SIGSEGV,&quit_all);
 	signal(SIGTERM,&quit_all);
-
+	bool autoStart = false;
+	for (int i = 0; i < argc; i++){
+       		if(strcmp(argv[i],"--autostart")==0) {
+			INFO("Woo Autostart");
+			autoStart = true;
+		}	
+	}
 	app = new GMenu2X();
+	//!app->input[PAGEUP]
 	DEBUG("Starting main()");
-	app->main();
-
+	app->main(autoStart);
 	return 0;
 }
 
@@ -615,8 +621,7 @@ GMenu2X::GMenu2X() {
 		menu->selLinkApp()->selector(lastSelectorElement, lastSelectorDir);
 }
 
-void GMenu2X::main() {
-	bool quit = false;
+void GMenu2X::main(bool autoStart) {
 	int i = 0, x = 0, y = 0, ix = 0, iy = 0;
 	uint32_t tickBattery = -4800, tickNow; //, tickMMC = 0; //, tickUSB = 0;
 	string prevBackdrop = confStr["wallpaper"], currBackdrop = confStr["wallpaper"];
@@ -657,7 +662,18 @@ void GMenu2X::main() {
 	if (udcConnectedOnBoot == UDC_CONNECT) checkUDC();
 	if (curMMCStatus == MMC_INSERT) mountSd(true);
 #endif
+	INFO("Starting autostart()");
+	INFO("conf %s %s",confStr["lastDirectory"].c_str(),confStr["lastCommand"].c_str());
+	if(!input[PAGEUP] && autoStart && confStr["lastCommand"] != "" && confStr["lastDirectory"] != "")  {
+		DEBUG("Starting autostart()");
+		INFO("autostart %s %s",confStr["lastDirectory"],confStr["lastCommand"]);
+		setCPU(confInt["lastCPU"]);
+		chdir(confStr["lastDirectory"].c_str());
+		quit();
+		execlp("/bin/sh", "/bin/sh", "-c", confStr["lastCommand"].c_str(), NULL);
+	}
 
+	bool quit = false;
 	while (!quit) {
 		tickNow = SDL_GetTicks();
 
@@ -1189,6 +1205,7 @@ void GMenu2X::settings() {
 	sd.addSetting(new MenuSettingDateTime(this, tr["Date & Time"], tr["Set system's date & time"], &confStr["datetime"]));
 	sd.addSetting(new MenuSettingMultiString(this, tr["Battery profile"], tr["Set the battery discharge profile"], &confStr["batteryType"], &batteryType));
 	sd.addSetting(new MenuSettingBool(this, tr["Save last selection"], tr["Save the last selected link and section on exit"], &confInt["saveSelection"]));
+	sd.addSetting(new MenuSettingBool(this, tr["Save autostart"], tr["Save the last run app for autostart"], &confInt["saveAutoStart"]));
 	sd.addSetting(new MenuSettingBool(this, tr["Output logs"], tr["Logs the link's output to read with Log Viewer"], &confInt["outputLogs"]));
 	sd.addSetting(new MenuSettingInt(this,tr["Screen timeout"], tr["Seconds to turn display off if inactive"], &confInt["backlightTimeout"], 30, 10, 300));
 	sd.addSetting(new MenuSettingInt(this,tr["Power timeout"], tr["Minutes to poweroff system if inactive"], &confInt["powerTimeout"], 10, 0, 300));
@@ -1347,6 +1364,7 @@ void GMenu2X::readConfig() {
 	confStr["batteryType"] = "BL-5B";
 	confStr["datetime"] = __BUILDTIME__;
 	confInt["saveSelection"] = 1;
+	confInt["saveAutoStart"] = 1;
 
 	if (fileExists(conffile)) {
 		ifstream inf(conffile.c_str(), ios_base::in);
@@ -1389,6 +1407,12 @@ void GMenu2X::readConfig() {
 	if (!confInt["saveSelection"]) {
 		confInt["section"] = 0;
 		confInt["link"] = 0;
+	}
+
+	if (!confInt["saveAutoStart"]) {
+		confStr["lastCommand"] = "";
+		confStr["lastDirectory"] = "";
+		confInt["lastCPU"] = confInt["cpuMenu"];
 	}
 
 	resX = constrain( confInt["resolutionX"], 320, 1920 );
@@ -1784,6 +1808,12 @@ void GMenu2X::explorer() {
 			loop = false;
 			//string command = cmdclean(fd.path()+"/"+fd.file) + "; sync & cd "+cmdclean(getExePath())+"; exec ./gmenu2x";
 			string command = cmdclean(fd.getPath() + "/" + fd.getFile());
+			if (confInt["saveAutoStart"]) {
+				confInt["lastCPU"] = confInt["cpuMenu"];
+				confStr["lastCommand"] = command.c_str();
+				confStr["lastDirectory"] = fd.getPath().c_str();
+				writeConfig();
+			}
 			chdir(fd.getPath().c_str());
 			quit();
 			setCPU(confInt["cpuMenu"]);
@@ -2628,7 +2658,7 @@ static int read_conf(const char *file)
   
   fd = open(file, O_RDWR);
   if(fd < 0){
-    val = -1;
+    val = 5;
   }
   else{
     read(fd, buf, sizeof(buf));

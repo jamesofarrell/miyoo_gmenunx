@@ -206,7 +206,7 @@ public:
 	FontHelper *font = NULL, *titlefont = NULL; //, *bottombarfont;
 
 	//Status functions
-	void main();
+	void main(bool autoStart);
 	void settings();
 	void restartDialog(bool showDialog = false);
 	void poweroffDialog();
@@ -226,6 +226,8 @@ public:
 	void initLayout();
 
 	bool inputCommonActions(bool &inputAction);
+
+	bool autoStart;
 
 	PowerManager *powerManager;
 
