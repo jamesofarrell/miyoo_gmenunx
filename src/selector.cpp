@@ -30,6 +30,9 @@
 #include "filelister.h"
 #include "debug.h"
 
+#include <algorithm>
+#include <boost/algorithm/string.hpp>
+
 using namespace std;
 
 string screendir;
@@ -67,14 +70,14 @@ int Selector::exec(int startSelection) {
 	drawBottomBar(this->bg);
 	this->bg->box(gmenu2x->listRect, gmenu2x->skinConfColors[COLOR_LIST_BG]);
 
-	if (link->getSelectorBrowser()) {
+	/*if (link->getSelectorBrowser()) {
 		gmenu2x->drawButton(this->bg, "x", gmenu2x->tr["Folder up"],
 		gmenu2x->drawButton(this->bg, "a", gmenu2x->tr["Select"],
 		gmenu2x->drawButton(this->bg, "b", gmenu2x->tr["Cancel"], 5)));
 	} else {
 		gmenu2x->drawButton(this->bg, "a", gmenu2x->tr["Select"],
 		gmenu2x->drawButton(this->bg, "b", gmenu2x->tr["Cancel"], 5));
-	}
+	}*/
 
 	prepare(&fl, &screens, &titles);
 	int selected = constrain(startSelection, 0, fl.size() - 1);
@@ -105,7 +108,7 @@ int Selector::exec(int startSelection) {
 			//Files & Directories
 			iY = gmenu2x->listRect.y + 1;
 			for (i = firstElement; i < fl.size() && i <= firstElement + numRows; i++, iY += rowHeight) {
-				if (i == selected) gmenu2x->s->box(gmenu2x->listRect.x, iY, gmenu2x->listRect.w, rowHeight, gmenu2x->skinConfColors[COLOR_SELECTION_BG]);
+				if (i == selected) gmenu2x->s->box(gmenu2x->listRect.x, iY, gmenu2x->listRect.w, rowHeight, gmenu2x->skinConfColors[COLOR_FONT]);
 				if (fl.isDirectory(i)) {
 					if (fl[i] == "..")
 						iconGoUp->blit(gmenu2x->s, gmenu2x->listRect.x + 10, iY + rowHeight/2, HAlignCenter | VAlignMiddle);
@@ -114,7 +117,34 @@ int Selector::exec(int startSelection) {
 				} else {
 					iconFile->blit(gmenu2x->s, gmenu2x->listRect.x + 10, iY + rowHeight/2, HAlignCenter | VAlignMiddle);
 				}
-				gmenu2x->s->write(gmenu2x->font, titles[i], gmenu2x->listRect.x + 21, iY + rowHeight/2, VAlignMiddle);
+				string name = titles[i];
+				for (auto& c: name) c = toupper(c);
+
+				name = name.substr(0, name.find_last_of("."));
+				name = boost::algorithm::replace_all_copy(name, ", THE", "");
+				name = boost::algorithm::replace_all_copy(name, "(", "");
+				name = boost::algorithm::replace_all_copy(name, ")", "");
+				name = boost::algorithm::replace_all_copy(name, "/", "");
+				name = boost::algorithm::replace_all_copy(name, "  ", " ");
+				name = boost::algorithm::replace_all_copy(name, " _ ", " ");
+				name = boost::algorithm::replace_all_copy(name, "_", "'");
+				string shortName = name;
+				std::size_t dashLocation = shortName.rfind(" - ");
+				if (dashLocation!=std::string::npos) {
+					shortName = shortName.substr(0,dashLocation);
+				}
+				name = boost::algorithm::replace_all_copy(name, " - ", "(");
+				if (name.length() > 40) {;
+					name = name.substr(0,40) + "...";
+				}
+				if (shortName.length() > 41) {;
+					shortName = shortName.substr(0,39) + "...";
+				}
+				if (i == selected) {
+					gmenu2x->s->write(gmenu2x->font, name, gmenu2x->listRect.x + 160, iY + rowHeight/2, HAlignCenter | VAlignMiddle, gmenu2x->skinConfColors[COLOR_BOTTOM_BAR_BG], gmenu2x->skinConfColors[COLOR_FONT_OUTLINE]);
+				} else {
+					gmenu2x->s->write(gmenu2x->font, shortName, gmenu2x->listRect.x + 160, iY + rowHeight/2, HAlignCenter | VAlignMiddle);
+				}
 			}
 
 			//Screenshot

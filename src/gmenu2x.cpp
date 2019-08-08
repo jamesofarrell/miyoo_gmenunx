@@ -692,10 +692,13 @@ void GMenu2X::main(bool autoStart) {
 					x = (i - menu->firstDispSection()) * skinConfInt["sectionBarSize"];
 				}
 
-				if (menu->selSectionIndex() == (int)i)
+				if (menu->selSectionIndex() == (int)i) {
 					s->box(x, y, skinConfInt["sectionBarSize"], skinConfInt["sectionBarSize"], skinConfColors[COLOR_SELECTION_BG]);
-
-				sc[menu->getSectionIcon(i)]->blit(s, {x, y, skinConfInt["sectionBarSize"], skinConfInt["sectionBarSize"]}, HAlignCenter | VAlignMiddle);
+					s->write(font, tr.translate(menu->getSectionLetter(i)), x + skinConfInt["sectionBarSize"]/2,y+font->getHeight()/2, HAlignCenter | VAlignMiddle, skinConfColors[COLOR_BOTTOM_BAR_BG], skinConfColors[COLOR_FONT_OUTLINE]);
+				} else {
+					//sc[menu->getSectionIcon(i)]->blit(s, {x, y, skinConfInt["sectionBarSize"], skinConfInt["sectionBarSize"]}, HAlignCenter | VAlignMiddle);
+					s->write(font, tr.translate(menu->getSectionLetter(i)), x + skinConfInt["sectionBarSize"]/2,y+font->getHeight()/2, HAlignCenter | VAlignMiddle);
+				}
 			}
 		}
 
@@ -711,12 +714,15 @@ void GMenu2X::main(bool autoStart) {
 			for (y = 0; y < linkRows && i < menu->sectionLinks()->size(); y++, i++) {
 				iy = linksRect.y + y * linkHeight;
 
-				if (i == (uint32_t)menu->selLinkIndex())
-					s->box(ix, iy, linksRect.w, linkHeight, skinConfColors[COLOR_SELECTION_BG]);
+				if (i == (uint32_t)menu->selLinkIndex()){
+					s->box(ix, iy, linksRect.w, linkHeight, skinConfColors[COLOR_FONT]);
+					s->write(titlefont, tr.translate(menu->sectionLinks()->at(i)->getTitle()), ix + linkSpacing + 160, iy + titlefont->getHeight()/2, HAlignCenter | VAlignMiddle, skinConfColors[COLOR_BOTTOM_BAR_BG], skinConfColors[COLOR_FONT_OUTLINE]);
+				} else {
+					s->write(titlefont, tr.translate(menu->sectionLinks()->at(i)->getTitle()), ix + linkSpacing + 160, iy + titlefont->getHeight()/2, HAlignCenter | VAlignMiddle);
+				}
 
-				sc[menu->sectionLinks()->at(i)->getIconPath()]->blit(s, {ix, iy, 36, linkHeight}, HAlignCenter | VAlignMiddle);
-				s->write(titlefont, tr.translate(menu->sectionLinks()->at(i)->getTitle()), ix + linkSpacing + 36, iy + titlefont->getHeight()/2, VAlignMiddle);
-				s->write(font, tr.translate(menu->sectionLinks()->at(i)->getDescription()), ix + linkSpacing + 36, iy + linkHeight - linkSpacing/2, VAlignBottom);
+				//sc[menu->sectionLinks()->at(i)->getIconPath()]->blit(s, {ix, iy, 36, linkHeight}, HAlignCenter | VAlignMiddle);
+				//s->write(font, tr.translate(menu->sectionLinks()->at(i)->getDescription()), ix + linkSpacing + 160, iy + linkHeight - linkSpacing/2, VAlignBottom);
 			}
 		} else {
 			for (y = 0; y < linkRows; y++) {
@@ -729,7 +735,7 @@ void GMenu2X::main(bool autoStart) {
 					if (i == (uint32_t)menu->selLinkIndex())
 						s->box(ix, iy, linkWidth, linkHeight, skinConfColors[COLOR_SELECTION_BG]);
 
-					sc[menu->sectionLinks()->at(i)->getIconPath()]->blit(s, {ix + 2, iy + 2, linkWidth - 4, linkHeight - 4}, HAlignCenter | VAlignMiddle);
+					//sc[menu->sectionLinks()->at(i)->getIconPath()]->blit(s, {ix + 2, iy + 2, linkWidth - 4, linkHeight - 4}, HAlignCenter | VAlignMiddle);
 
 					s->write(font, tr.translate(menu->sectionLinks()->at(i)->getTitle()), ix + linkWidth/2, iy + linkHeight - 2, HAlignCenter | VAlignBottom);
 				}
@@ -1402,7 +1408,7 @@ void GMenu2X::readConfig() {
 	evalIntConf( &confInt["maxBattery"], 4500, 1, 10000);
 	evalIntConf( &confInt["sectionBar"], SB_LEFT, 1, 4);
 	evalIntConf( &confInt["linkCols"], 1, 1, 8);
-	evalIntConf( &confInt["linkRows"], 6, 1, 8);
+	evalIntConf( &confInt["linkRows"], 6, 1, 18);
 
 	if (!confInt["saveSelection"]) {
 		confInt["section"] = 0;
@@ -1624,7 +1630,7 @@ void GMenu2X::skinMenu() {
 		sd.addSetting(new MenuSettingInt(this, tr["Section bar size"], tr["Size of section bar"], &skinConfInt["sectionBarSize"], 40, 1, resX));
 		sd.addSetting(new MenuSettingMultiString(this, tr["Section bar position"], tr["Set the position of the Section Bar"], &sectionBar, &sbStr));
 		sd.addSetting(new MenuSettingInt(this, tr["Menu columns"], tr["Number of columns of links in main menu"], &confInt["linkCols"], 1, 1, 8));
-		sd.addSetting(new MenuSettingInt(this, tr["Menu rows"], tr["Number of rows of links in main menu"], &confInt["linkRows"], 6, 1, 8));
+		sd.addSetting(new MenuSettingInt(this, tr["Menu rows"], tr["Number of rows of links in main menu"], &confInt["linkRows"], 6, 1, 18));
 		sd.exec();
 
 		if (sc.add("skins/" + confStr["skin"] + "/wallpapers/" + confStr["wallpaper"]) != NULL)
@@ -2812,7 +2818,8 @@ int GMenu2X::drawButtonRight(Surface *s, const string &btn, const string &text, 
 
 void GMenu2X::drawScrollBar(uint32_t pagesize, uint32_t totalsize, uint32_t pagepos, SDL_Rect scrollRect) {
 	if (totalsize <= pagesize) return;
-
+	
+	return;
 	//internal bar total height = height-2
 	//bar size
 	uint32_t bs = (scrollRect.h - 3) * pagesize / totalsize;
