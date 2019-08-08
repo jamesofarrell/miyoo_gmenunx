@@ -580,6 +580,8 @@ GMenu2X::GMenu2X() {
 #else
 	s->raw = SDL_SetVideoMode(resX, resY, confInt["videoBpp"], SDL_HWSURFACE | SDL_DOUBLEBUF);
 #endif
+	s->box((SDL_Rect){0, 0, resX, resY}, (RGBAColor){122, 129, 16, 255});
+	s->flip();
 
 	setWallpaper(confStr["wallpaper"]);
 
