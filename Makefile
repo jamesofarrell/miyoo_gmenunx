@@ -17,7 +17,7 @@ CFLAGS = -ggdb -DTARGET_MIYOO -DTARGET=$(TARGET) -D__BUILDTIME__="$(BUILDTIME)" 
 #CFLAGS += -std=c++11 -fdata-sections -ffunction-sections -fno-exceptions -fno-math-errno -fno-threadsafe-statics -Os
 
 CXXFLAGS = $(CFLAGS)
-LDFLAGS = $(SDL_LIBS) -lfreetype -lSDL_image -lSDL_ttf -lSDL -lpthread
+LDFLAGS = $(SDL_LIBS) -lfreetype -lSDL_image -lSDL_mixer -lSDL_ttf -lSDL -lpthread
 #LDFLAGS +=-Wl,--as-needed -Wl,--gc-sections -s
 
 OBJDIR = objs/$(TARGET)

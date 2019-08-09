@@ -128,6 +128,8 @@ private:
 	void initMenu();
 	void showManual();
 	// IconButton *btnContextMenu;
+	//
+	bool bootAnimaton();
 
 #ifdef TARGET_GP2X
 	typedef struct {
@@ -203,7 +205,7 @@ public:
 	SurfaceCollection sc;
 	Translator tr;
 	Surface *s, *bg;
-	FontHelper *font = NULL, *titlefont = NULL; //, *bottombarfont;
+	FontHelper *font = NULL, *titlefont = NULL;//, *bottombarfont;
 
 	//Status functions
 	void main(bool autoStart);
@@ -228,6 +230,7 @@ public:
 	bool inputCommonActions(bool &inputAction);
 
 	bool autoStart;
+	bool bootLogo;
 
 	PowerManager *powerManager;
 

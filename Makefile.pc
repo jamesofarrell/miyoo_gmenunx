@@ -9,7 +9,7 @@ STRIP = strip
 CFLAGS = -I"/usr/include" `sdl-config --cflags` -DTARGET_PC -DTARGET=$(TARGET) -D__BUILDTIME__="$(BUILDTIME)" -DLOG_LEVEL=4 -Wall -Wundef -Wno-deprecated -Wno-unknown-pragmas -Wno-format -pg -O0 -g -ggdb
 CXXFLAGS = $(CFLAGS)
 #LDFLAGS = -L"/usr/lib" `sdl-config --libs` -lfreetype -lSDL_image -lSDL_ttf -lSDL_gfx -ljpeg -lpng12 -lz
-LDFLAGS = -L"/usr/lib" `sdl-config --libs` -lfreetype -lSDL_image -lSDL_ttf -ljpeg -lpng12 -lz
+LDFLAGS = -L"/usr/lib" `sdl-config --libs` -lfreetype -lSDL_mixer -lSDL_image -lSDL_ttf -ljpeg -lz
 
 OBJDIR = objs/$(TARGET)
 DISTDIR = dist/$(TARGET)/gmenu2x
