@@ -90,6 +90,7 @@ public:
 	void renameSection(int index, const string &name);
 	int getSectionIndex(const string &name);
 	const string getSectionIcon(int i);
+	const string getSectionLetter(int i);
 };
 
 #endif

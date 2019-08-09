@@ -457,4 +457,7 @@ const string Menu::getSectionIcon(int i) {
 	return sectionIcon;
 }
 
-
+const string Menu::getSectionLetter(int i) {
+	string s(1,sections[i].at(0));
+	return s;
+}
