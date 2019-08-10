@@ -118,27 +118,30 @@ int Selector::exec(int startSelection) {
 					iconFile->blit(gmenu2x->s, gmenu2x->listRect.x + 10, iY + rowHeight/2, HAlignCenter | VAlignMiddle);
 				}
 				string name = titles[i];
-				for (auto& c: name) c = toupper(c);
-
-				name = name.substr(0, name.find_last_of("."));
-				name = boost::algorithm::replace_all_copy(name, ", THE", "");
-				name = boost::algorithm::replace_all_copy(name, "(", "");
-				name = boost::algorithm::replace_all_copy(name, ")", "");
-				name = boost::algorithm::replace_all_copy(name, "/", "");
-				name = boost::algorithm::replace_all_copy(name, "  ", " ");
-				name = boost::algorithm::replace_all_copy(name, " _ ", " ");
-				name = boost::algorithm::replace_all_copy(name, "_", "'");
 				string shortName = name;
-				std::size_t dashLocation = shortName.rfind(" - ");
-				if (dashLocation!=std::string::npos) {
-					shortName = shortName.substr(0,dashLocation);
-				}
-				name = boost::algorithm::replace_all_copy(name, " - ", "(");
-				if (name.length() > 40) {;
-					name = name.substr(0,40) + "...";
-				}
-				if (shortName.length() > 41) {;
-					shortName = shortName.substr(0,39) + "...";
+				if(gmenu2x->confInt["shortNames"]) {
+					for (auto& c: name) c = toupper(c);
+
+					name = name.substr(0, name.find_last_of("."));
+					name = boost::algorithm::replace_all_copy(name, ", THE", "");
+					name = boost::algorithm::replace_all_copy(name, "(", "");
+					name = boost::algorithm::replace_all_copy(name, ")", "");
+					name = boost::algorithm::replace_all_copy(name, "/", "");
+					name = boost::algorithm::replace_all_copy(name, "  ", " ");
+					name = boost::algorithm::replace_all_copy(name, " _ ", " ");
+					name = boost::algorithm::replace_all_copy(name, "_", "'");
+					shortName = name;
+					std::size_t dashLocation = shortName.rfind(" - ");
+					if (dashLocation!=std::string::npos) {
+						shortName = shortName.substr(0,dashLocation);
+					}
+					name = boost::algorithm::replace_all_copy(name, " - ", "(");
+					if (name.length() > 40) {
+						name = name.substr(0,38) + "...";
+					}
+					if (shortName.length() > 40) {
+						shortName = shortName.substr(0,38) + "...";
+					}
 				}
 				if (i == selected) {
 					gmenu2x->s->write(gmenu2x->font, name, gmenu2x->listRect.x + 160, iY + rowHeight/2, HAlignCenter | VAlignMiddle, gmenu2x->skinConfColors[COLOR_BOTTOM_BAR_BG], gmenu2x->skinConfColors[COLOR_FONT_OUTLINE]);

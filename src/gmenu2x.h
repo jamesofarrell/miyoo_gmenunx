@@ -61,8 +61,14 @@ enum color {
 	COLOR_FONT_OUTLINE,
 	COLOR_FONT_ALT,
 	COLOR_FONT_ALT_OUTLINE,
+	//COLOR_BOOTLOGO_BG,
 
 	NUM_COLORS,
+};
+
+enum tb {
+	TA_LEFT,
+	TA_CENTER,
 };
 
 enum sb {
@@ -208,7 +214,7 @@ public:
 	FontHelper *font = NULL, *titlefont = NULL;//, *bottombarfont;
 
 	//Status functions
-	void main(bool autoStart);
+	void main(bool autoStart,bool bootLogo);
 	void settings();
 	void restartDialog(bool showDialog = false);
 	void poweroffDialog();

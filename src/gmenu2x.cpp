@@ -92,10 +92,10 @@
 #define B 16
 
 // delay until the logo starts being visible (unit: frames) (60 frames = 1 sec)
-#define ANIMDELAY 60
+#define ANIMDELAY 1
 
 // time from the moment the logo stops moving and sound is played until the logo app closes (unit: milliseconds)
-#define ENDDELAY 100
+#define ENDDELAY 2000
 
 //speed at which the logo moves (unit: pixels per frame)
 #define ANIMSPEED 1
@@ -544,28 +544,31 @@ int main(int argc, char * argv[]) {
 	signal(SIGSEGV,&quit_all);
 	signal(SIGTERM,&quit_all);
 	bool autoStart = false;
-	bool bootLogo = true;
+	bool bootLogo = false;
 	for (int i = 0; i < argc; i++){
        		if(strcmp(argv[i],"--autostart")==0) {
 			INFO("Woo Autostart");
 			autoStart = true;
-		} else if (strcmp(argv[i],"--no-logo")==0) {
-			INFO("SAD NO BOOT LOGO");
-			bootLogo = false;	
+		} else if (strcmp(argv[i],"--logo")==0) {
+			INFO("BOOT LOGO");
+			bootLogo = true;	
 		}
 	}
 	app = new GMenu2X();
 	//!app->input[PAGEUP]
 	DEBUG("Starting main()");
-	app->main(autoStart);
+	app->main(autoStart, bootLogo);
 	return 0;
 }
 
 bool GMenu2X::bootAnimaton() {
 	Surface *logoimg;
 	SDL_RWops *RWops;
-	RWops = SDL_RWFromMem(png_logo_pocketgo, sizeof(png_logo_pocketgo));
-	logoimg = new Surface(IMG_LoadPNG_RW(RWops), s->format(), 0);
+	logoimg = sc.skinRes("bootlogo.png");
+	if(!logoimg) {
+		RWops = SDL_RWFromMem(png_logo_pocketgo, sizeof(png_logo_pocketgo));
+		logoimg = new Surface(IMG_LoadPNG_RW(RWops), s->format(), 0);
+	}
     	if (!logoimg) {
         	printf("Error loading logo: %s\n", IMG_GetError());
         	return false;
@@ -576,21 +579,28 @@ bool GMenu2X::bootAnimaton() {
         Mix_Chunk *logosound;
 
         RWops2 = SDL_RWFromMem(wav_logosound, sizeof(wav_logosound));
-    	logosound = Mix_LoadWAV_RW(RWops2, 1);
+	string wavpath = path + "skins/" + confStr["skin"] + "/bootlogo.wav";
+	logosound = Mix_LoadWAV(wavpath.c_str());
+	if (!logosound) {
+    		logosound = Mix_LoadWAV_RW(RWops2, 1);
+	}
     	if (!logosound) {
     	    printf("Error loading sound: %s\n", Mix_GetError());
     	    return false;
     	}
-        int dest_y = (resX - logoimg->raw->h) / 2;
+        int dest_y = (resY / 2 ) - (logoimg->raw->h / 2);
         uint32_t curr_time = SDL_GetTicks();
         uint32_t old_time = curr_time;
         uint32_t color = SDL_MapRGB(s->format(), R, G, B);
 	bool returnVal = true;
+	bool playSound = true;
         for (int i = 0 - logoimg->raw->h - ANIMDELAY; i <= dest_y; i = i + ANIMSPEED) {
 		input.update(false);
 		if (input[CONFIRM] || input[CANCEL]) {
+			playSound = false;
 			break;
 		} else if (input[MODIFIER]) {
+			playSound = false;
 			returnVal = false;
 			break;
 		}
@@ -610,10 +620,12 @@ bool GMenu2X::bootAnimaton() {
 	}
 
 
-	s->box((SDL_Rect){0, 0, resX, resY}, (RGBAColor){R, G, B, 255});
 	s->flip();
-	SDL_Delay(ENDDELAY);
-        SDL_FreeRW(RWops);
+	if(playSound) {
+		SDL_Delay(confInt["bootLogoDelay"]*100);
+	}
+	s->box((SDL_Rect){0, 0, resX, resY}, (RGBAColor){R, G, B, 255});
+        //SDL_FreeRW(RWops2);
         //SDL_FreeRW(RWops2);
 	logoimg->free();
 
@@ -716,7 +728,7 @@ GMenu2X::GMenu2X() {
 		menu->selLinkApp()->selector(lastSelectorElement, lastSelectorDir);
 }
 
-void GMenu2X::main(bool autoStart) {
+void GMenu2X::main(bool autoStart,bool bootLogo) {
 	int i = 0, x = 0, y = 0, ix = 0, iy = 0;
 	uint32_t tickBattery = -4800, tickNow; //, tickMMC = 0; //, tickUSB = 0;
 	string prevBackdrop = confStr["wallpaper"], currBackdrop = confStr["wallpaper"];
@@ -757,7 +769,7 @@ void GMenu2X::main(bool autoStart) {
 	if (udcConnectedOnBoot == UDC_CONNECT) checkUDC();
 	if (curMMCStatus == MMC_INSERT) mountSd(true);
 #endif
-	if (bootLogo || autoStart) {
+	if (confInt["bootLogoShow"] || (autoStart&& confStr["lastCommand"] != "" && confStr["lastDirectory"] != "" )) {
 		autoStart = bootAnimaton();
 	}
 	//autoStart = false;
@@ -798,10 +810,18 @@ void GMenu2X::main(bool autoStart) {
 
 				if (menu->selSectionIndex() == (int)i) {
 					s->box(x, y, skinConfInt["sectionBarSize"], skinConfInt["sectionBarSize"], skinConfColors[COLOR_SELECTION_BG]);
+					if(confInt["sectionLetters"]) {
 					s->write(font, tr.translate(menu->getSectionLetter(i)), x + skinConfInt["sectionBarSize"]/2,y+font->getHeight()/2, HAlignCenter | VAlignMiddle, skinConfColors[COLOR_BOTTOM_BAR_BG], skinConfColors[COLOR_FONT_OUTLINE]);
+					} else {
+						sc[menu->getSectionIcon(i)]->blit(s, {x, y, skinConfInt["sectionBarSize"], skinConfInt["sectionBarSize"]}, HAlignCenter | VAlignMiddle);
+					}
 				} else {
-					//sc[menu->getSectionIcon(i)]->blit(s, {x, y, skinConfInt["sectionBarSize"], skinConfInt["sectionBarSize"]}, HAlignCenter | VAlignMiddle);
-					s->write(font, tr.translate(menu->getSectionLetter(i)), x + skinConfInt["sectionBarSize"]/2,y+font->getHeight()/2, HAlignCenter | VAlignMiddle);
+
+					if(confInt["sectionLetters"]) {
+						s->write(font, tr.translate(menu->getSectionLetter(i)), x + skinConfInt["sectionBarSize"]/2,y+font->getHeight()/2, HAlignCenter | VAlignMiddle);
+					} else {
+						sc[menu->getSectionIcon(i)]->blit(s, {x, y, skinConfInt["sectionBarSize"], skinConfInt["sectionBarSize"]}, HAlignCenter | VAlignMiddle);
+					}
 				}
 			}
 		}
@@ -817,16 +837,37 @@ void GMenu2X::main(bool autoStart) {
 			ix = linksRect.x;
 			for (y = 0; y < linkRows && i < menu->sectionLinks()->size(); y++, i++) {
 				iy = linksRect.y + y * linkHeight;
+				string shortName = tr.translate(menu->sectionLinks()->at(i)->getTitle());
+				string name = shortName;
+				if(confInt["shortNames"]) {
+					string description = tr.translate(menu->sectionLinks()->at(i)->getDescription());
+					if(description.length() > 0) {
+						name = name + " - " + description;
+						if (name.length() > 40) {
+                                                	name = name.substr(0,38) + "...";
+                                        	}
+					}
+				}
+				int alignment = HAlignLeft;
+				int hOffset = 2;
+				if(confInt["textAlignment"]==TA_CENTER) {
+					alignment = HAlignCenter;
+					hOffset = (resX/2) - hOffset + 2;
+				} 
+
 
 				if (i == (uint32_t)menu->selLinkIndex()){
 					s->box(ix, iy, linksRect.w, linkHeight, skinConfColors[COLOR_FONT]);
-					s->write(titlefont, tr.translate(menu->sectionLinks()->at(i)->getTitle()), ix + linkSpacing + 160, iy + titlefont->getHeight()/2, HAlignCenter | VAlignMiddle, skinConfColors[COLOR_BOTTOM_BAR_BG], skinConfColors[COLOR_FONT_OUTLINE]);
+					s->write(titlefont, name, ix + linkSpacing + hOffset, iy + titlefont->getHeight()/2, alignment | VAlignMiddle, skinConfColors[COLOR_BOTTOM_BAR_BG], skinConfColors[COLOR_FONT_OUTLINE]);
 				} else {
-					s->write(titlefont, tr.translate(menu->sectionLinks()->at(i)->getTitle()), ix + linkSpacing + 160, iy + titlefont->getHeight()/2, HAlignCenter | VAlignMiddle);
+					s->write(titlefont, shortName, ix + linkSpacing + hOffset, iy + titlefont->getHeight()/2, alignment | VAlignMiddle);
 				}
 
 				//sc[menu->sectionLinks()->at(i)->getIconPath()]->blit(s, {ix, iy, 36, linkHeight}, HAlignCenter | VAlignMiddle);
-				//s->write(font, tr.translate(menu->sectionLinks()->at(i)->getDescription()), ix + linkSpacing + 160, iy + linkHeight - linkSpacing/2, VAlignBottom);
+				if(!confInt["hideDescription"]) {
+					s->write(font, tr.translate(menu->sectionLinks()->at(i)->getDescription()), ix + linkSpacing + hOffset, iy + linkHeight - linkSpacing/2, alignment | VAlignBottom);
+				}
+
 			}
 		} else {
 			for (y = 0; y < linkRows; y++) {
@@ -1511,6 +1552,7 @@ void GMenu2X::readConfig() {
 	evalIntConf( &confInt["minBattery"], 0, 1, 10000);
 	evalIntConf( &confInt["maxBattery"], 4500, 1, 10000);
 	evalIntConf( &confInt["sectionBar"], SB_LEFT, 1, 4);
+	evalIntConf( &confInt["textAlignment"], 0,0,1);
 	evalIntConf( &confInt["linkCols"], 1, 1, 8);
 	evalIntConf( &confInt["linkRows"], 6, 1, 18);
 
@@ -1606,6 +1648,7 @@ void GMenu2X::setSkin(const string &skin, bool resetWallpaper, bool clearSC) {
 	skinConfColors[COLOR_FONT_OUTLINE] = (RGBAColor){0,0,0,200};
 	skinConfColors[COLOR_FONT_ALT] = (RGBAColor){253,1,252,0};
 	skinConfColors[COLOR_FONT_ALT_OUTLINE] = (RGBAColor){253,1,252,0};
+	//skinConfColors[COLOR_BOOTLOGO_BG] = (RGBAColor){0,0,0,255};
 
 //load skin settings
 	string skinconfname = "skins/" + skin + "/skin.conf";
@@ -1662,6 +1705,13 @@ void GMenu2X::setSkin(const string &skin, bool resetWallpaper, bool clearSC) {
 	evalIntConf( &skinConfInt["previewWidth"], 142, 1, resX);
 	evalIntConf( &skinConfInt["fontSize"], 12, 6, 60);
 	evalIntConf( &skinConfInt["fontSizeTitle"], 20, 6, 60);
+	evalIntConf( &skinConfInt["hideIcons"], 0, 1, 0);
+	evalIntConf( &skinConfInt["invertSelected"], 0, 0, 1);
+	evalIntConf( &skinConfInt["sectionLetters"], 0, 0, 1);
+	evalIntConf( &skinConfInt["shortNames"], 0, 0, 1);
+	evalIntConf( &skinConfInt["hideDescription"], 0, 0, 1);
+	evalIntConf( &skinConfInt["bootLogoDisplay"], 1, 0, 1);
+	evalIntConf( &skinConfInt["bootLogoDelay"], 12, 0, 100);
 
 	if (menu != NULL && clearSC) menu->loadIcons();
 
@@ -1693,8 +1743,12 @@ void GMenu2X::skinMenu() {
 	sbStr.push_back("Bottom");
 	sbStr.push_back("Right");
 	sbStr.push_back("Top");
+	vector<string> taStr;
+	taStr.push_back("Left");
+	taStr.push_back("Center");
 	int sbPrev = confInt["sectionBar"];
 	string sectionBar = sbStr[confInt["sectionBar"]];
+	string textAlignment = taStr[confInt["textAlignment"]];
 
 	do {
 		setSkin(confStr["skin"], false, false);
@@ -1733,14 +1787,23 @@ void GMenu2X::skinMenu() {
 		sd.addSetting(new MenuSettingInt(this, tr["Bottom bar height"], tr["Height of bottom bar"], &skinConfInt["bottomBarHeight"], 16, 1, resY));
 		sd.addSetting(new MenuSettingInt(this, tr["Section bar size"], tr["Size of section bar"], &skinConfInt["sectionBarSize"], 40, 1, resX));
 		sd.addSetting(new MenuSettingMultiString(this, tr["Section bar position"], tr["Set the position of the Section Bar"], &sectionBar, &sbStr));
+		sd.addSetting(new MenuSettingInt(this, tr["Section letter"], tr["Use first letter instead of icon"], &confInt["sectionLetters"], 0, 0, 1));
 		sd.addSetting(new MenuSettingInt(this, tr["Menu columns"], tr["Number of columns of links in main menu"], &confInt["linkCols"], 1, 1, 8));
 		sd.addSetting(new MenuSettingInt(this, tr["Menu rows"], tr["Number of rows of links in main menu"], &confInt["linkRows"], 6, 1, 18));
+		sd.addSetting(new MenuSettingMultiString(this, tr["Text Alignment"], tr["Set the alignment of the text"], &textAlignment, &taStr));
+		sd.addSetting(new MenuSettingInt(this, tr["Short Names"], tr["Use short names when not selected"], &confInt["shortNames"], 0, 0, 1));
+		sd.addSetting(new MenuSettingInt(this, tr["Hide Description"], tr["Hide description line"], &confInt["hideDescription"], 0, 0, 1));
+		sd.addSetting(new MenuSettingInt(this, tr["Invert Selected"], tr["Invert colors of highlighted item"], &confInt["invertSelected"], 0, 0, 1));
+		sd.addSetting(new MenuSettingInt(this, tr["Hide Icons"], tr["Hide icons in list"], &confInt["hideIcons"], 0, 0, 1));
+		sd.addSetting(new MenuSettingInt(this, tr["Boot Logo"], tr["Show boot logo"], &confInt["bootLogoShow"], 1, 0, 1));
+		sd.addSetting(new MenuSettingInt(this, tr["Boot Logo Delay"], tr["How long to delay for audio"], &confInt["bootLogoDelay"], 12, 0, 100));
 		sd.exec();
 
 		if (sc.add("skins/" + confStr["skin"] + "/wallpapers/" + confStr["wallpaper"]) != NULL)
 			confStr["wallpaper"] = "skins/" + confStr["skin"] + "/wallpapers/" + confStr["wallpaper"];
 		else if (sc.add("skins/Default/wallpapers/" + confStr["wallpaper"]) != NULL)
 			confStr["wallpaper"] = "skins/Default/wallpapers/" + confStr["wallpaper"];
+		sc.add("skins/" + confStr["skin"] + "bootlogo.png");
 
 		setWallpaper(confStr["wallpaper"]);
 
@@ -1753,6 +1816,9 @@ void GMenu2X::skinMenu() {
 	else if (sectionBar == "Top") confInt["sectionBar"] = SB_TOP;
 	else if (sectionBar == "Bottom") confInt["sectionBar"] = SB_BOTTOM;
 	else confInt["sectionBar"] = SB_LEFT;
+
+	if (textAlignment == "Left") confInt["textAlignment"] = TA_LEFT;
+	else confInt["textAlignment"] = TA_CENTER;
 
 	writeSkinConfig();
 	writeConfig();
@@ -1780,6 +1846,7 @@ void GMenu2X::skinColors() {
 		sd.addSetting(new MenuSettingRGBA(this, tr["Font Outline"], tr["Color of the font's outline"], &skinConfColors[COLOR_FONT_OUTLINE]));
 		sd.addSetting(new MenuSettingRGBA(this, tr["Alt Font"], tr["Color of the alternative font"], &skinConfColors[COLOR_FONT_ALT]));
 		sd.addSetting(new MenuSettingRGBA(this, tr["Alt Font Outline"], tr["Color of the alternative font outline"], &skinConfColors[COLOR_FONT_ALT_OUTLINE]));
+		//sd.addSetting(new MenuSettingRGBA(this, tr["Bootlogo Background"], tr["Color of the bootlogo background"], &skinConfColors[COLOR_BOOTLOGO_BG]));
 		sd.exec();
 		save = sd.save;
 	} while (!save);
